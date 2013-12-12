@@ -95,5 +95,24 @@ name read_name(unsigned long index) {
 }
 
 node find_node_by_name(char* path) {
-	return NULL;
+	char** p = split(path);
+	int i = 0, count = 0;
+	while(p[i++] != NULL) {
+		printf("-----path element: %d : %s\n", i-1, p[i-1]);
+		count++;
+	}
+	if (count == 1) {
+		printf("-----root: %s\n", p[0]);
+		if (strcmp(path, "/") == 0) {
+			printf("-----is root\n");
+			return read_node(node_start);
+		}
+		else {
+			printf("-----ERROR! root is not root\n");
+			return NULL;
+		}
+	} else {
+		printf("-----find here\n");
+		return NULL;
+	}
 }

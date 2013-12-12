@@ -48,9 +48,24 @@ void open_root() {
 ---------------fuse functions here--------------
 ************************************************/
 
-// static int myfs_getattr(const char *path, struct stat *stbuf) {
-
-// }
+static int myfs_getattr(const char *path, struct stat *stbuf) {
+	node n = find_node_by_name(path);
+	if (n == NULL) {
+		printf("-----can not find file %s\n", path);
+		return -ENOENT;
+	} else {
+		printf("-----find file %s\n", path);
+		if (n->type == 1) {
+			printf("-----it is dir\n");
+			stbuf->st_mode = S_IFDIR | 0777;
+			stbuf->st_nlink = 3;
+			return 0;
+		} else {
+			printf("-----it is file\n");
+			return -ENOENT;
+		}
+	}
+}
 
 // static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
 // }
@@ -105,7 +120,7 @@ void open_root() {
 
 
 static struct fuse_operations operations = {
-	// .getattr	= hello_getattr,
+	.getattr	= myfs_getattr
 	// .readdir = myfs_readdir,
 	// //.opendir = myfs_opendir,
 	// .getattr = myfs_getattr,
@@ -124,5 +139,5 @@ int main(int argc, char *argv[]) {
 
 	printf("compare %d \n", 0 != "\0");
 
-	return 0;//fuse_main(argc, argv, &hello_oper, NULL);
+	return fuse_main(argc, argv, &operations, NULL);
 }
