@@ -40,5 +40,8 @@ node read_node(unsigned long index);
 node find_node_by_name(char* path);
 void save_name(name n);
 name read_name(unsigned long index);
+unsigned long find_empty_node();
+unsigned long find_empty_name();
+unsigned long find_empty_data();
 
 #endif

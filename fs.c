@@ -42,17 +42,52 @@ FILE* open_fs() {
 	return fs;
 }
 
+unsigned long find_empty_node() {
+	FILE * fs = open_fs();
+	unsigned long pos = node_start;
+	char stat;
+	do {
+		pos += node_size;
+		printf("find space for node. try %lu\n", pos);
+		fseek(fs, pos, SEEK_SET);
+		fread(&stat, sizeof(char), 1, fs);
+	} while (stat != 0 && pos < name_start);
+	return pos;
+}
+
+unsigned long find_empty_name() {
+	FILE * fs = open_fs();
+	unsigned long pos = name_start;
+	char stat;
+	do {
+		pos += name_size;
+		printf("find space for name. try %lu\n", pos);
+		fseek(fs, pos, SEEK_SET);
+		fread(&stat, sizeof(char), 1, fs);
+	} while (stat != 0 && pos < data_start);
+	return pos;
+}
+
+unsigned long find_empty_data() {
+
+}
+
+
 void load_fs() {
 	fclose(open_fs());
-	node_size = 12 * 8 + 4;
+	node_size = 97;
 	name_size = 64;
+	data_size = 128;
 }
 
 void save_node(node n) {
 	FILE* fs = open_fs();
 	fseek(fs, n->index, SEEK_SET);
-	fwrite(&n->type, sizeof(n->type), 1, fs);
-	fwrite(&n->name, sizeof(n->name), 1, fs);
+	int b = fwrite(&n->type, sizeof(n->type), 1, fs);
+	printf("written type size %d\n", b);
+	b = fwrite(&n->name, sizeof(n->name), 1, fs);
+	printf("written name size %d\n", b);
+	printf("--savename %d\n", n->name);
 	fwrite(n->data, sizeof(n->data), 1, fs);
 	fclose(fs);
 }
@@ -68,6 +103,7 @@ node read_node(unsigned long index) {
 	n->index = index;
 	n->type = t;
 	fread(&n->name, sizeof(n->name), 1, fs);
+	printf("--readname %d\n", n->name);
 	fread(n->data, sizeof(n->data), 1, fs);
 	return n;
 }
@@ -112,7 +148,33 @@ node find_node_by_name(char* path) {
 			return NULL;
 		}
 	} else {
-		printf("-----find here\n");
-		return NULL;
+		printf("-----search now\n");
+		node root = read_node(node_start);
+		printf("-----get root %lu\n", root->index);
+		node n = root;
+		node current = NULL;
+		i = 1;
+		printf("-----start loop\n");;
+		while (p[i] != NULL) {
+			printf("-----current name pattern %s\n", p[i]);
+			for (int j = 0; j < 9; j++) {
+				printf("-----check %d cell data %lu\n", j, n->data[j]);
+				if (n->data[j] != 0) {
+					node child = read_node(n->data[j]);
+					name nm = read_name(child->name);
+					printf("-------compare %s pat %s name\n", p[i], nm->name);
+					if (strcmp(p[i], nm->name) == 0) {
+						printf("-------find ! %s pat %s name\n", p[i], nm->name);
+						current = child;
+						printf("!!!!!!!TYPE!!!!!-------type %d name\n", current->type);
+						break;
+					}
+				}
+			}
+			if (current == NULL) return NULL;
+			i++;
+			n = current;
+		}
+		return n;
 	}
 }

@@ -102,17 +102,48 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 
 // }
 
-// static int myfs_mkdir(const char* path, mode_t mode) {
+static int myfs_mkdir(const char* path, mode_t mode) {
+	return 0;
+}
 
-// }
-
-// static int myfs_opendir(const char *path, struct fuse_file_info *a) {
-// 	return 0;
-// }
+static int myfs_opendir(const char *path, struct fuse_file_info *fi) {
+	node n = find_node_by_name(path);
+	if (n == NULL) 
+		return -ENOENT;
+	return 0;
+}
  
-// static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
-
-// }
+static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+	node n = find_node_by_name(path);
+	printf("-------!!!!!!!!!!!--------read dir %s\n", path);
+	// if (n != NULL) {
+	// 	name test = read_name(n->name);
+	// 	if (test != NULL)
+	// 		printf("---------!!!!!!!!!------real name %s\n", n->name);
+	// 	else {
+	// 		printf("---------------!!!!!!!some error\n");
+	// 	}
+	// }
+	if (n == NULL) {
+		printf("-----can not find file %s\n", path);
+		return -ENOENT;
+	} else { 
+		filler(buf, ".", NULL, 0);
+		filler(buf, "..", NULL, 0);
+		for (int i = 0; i < 10 && n->data[i] != 0; i++) {
+			node ch = read_node(n->data[i]);
+			if (ch == NULL) 
+				return -ENOENT;
+			name nm = read_name(ch->name);
+			if (nm == NULL) 
+				return -ENOENT;
+			filler(buf, nm->name, NULL, 0);
+			free(nm);
+			free(ch);
+		}
+		return 0;
+	}
+}
  
 // static int myfs_releasedir(const char *path, struct fuse_file_info *a) {
 //  return 0;
@@ -120,11 +151,10 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 
 
 static struct fuse_operations operations = {
-	.getattr	= myfs_getattr
-	// .readdir = myfs_readdir,
-	// //.opendir = myfs_opendir,
-	// .getattr = myfs_getattr,
-	// .mkdir = myfs_mkdir,  //--
+	.getattr	= myfs_getattr,
+	.readdir 	= myfs_readdir,
+	.opendir 	= myfs_opendir,
+	.mkdir 		= myfs_mkdir
 	// .open = myfs_open,
 	// .create = myfs_create,
 	// .mknod = myfs_mknod,
@@ -138,6 +168,27 @@ int main(int argc, char *argv[]) {
 	printf("size %lu, node %lu, name %lu, data %lu\n", size, node_start, name_start, data_start);
 
 	printf("compare %d \n", 0 != "\0");
+
+	printf("empty node %lu\n", find_empty_node());
+
+	// name n = malloc(sizeof(struct fs_name_s));
+	// n->index = name_start;
+	// n->name = "it_is_new_cool_dir";
+	// save_name(n);
+
+	// unsigned long new = find_empty_name();
+
+	// n->index = new;
+	// n->name = "it_is_second_cool_dir";
+	// save_name(n);
+
+	// free(n);
+	// n = read_name(name_start);
+	// printf("%s\n", n->name);
+
+	// free(n);
+	// n = read_name(new);
+	// printf("%s\n", n->name);
 
 	return fuse_main(argc, argv, &operations, NULL);
 }
