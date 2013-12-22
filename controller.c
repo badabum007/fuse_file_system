@@ -8,39 +8,9 @@
 #include <string.h>
 #include <limits.h>
 #include "fs.h"
-/**********************************
-----------file system types--------
-**********************************/
-
-/**********************************
-end-------file system types--------
-**********************************/
-
-
-/**********************************
-----------file system functions----
-**********************************/
-
-void log(char* message)
-{
-    FILE* f = fopen("/home/medvedmike/lodfile.log","a+");
-    int i = 0;
-    while(message[i] != 0) fputc((int)message[i++],f);
-    fputc((int)'\n',f);
-    fclose(f);
-}
 
 void open_root() {
-	node n = read_node(node_start);
-	if (n != NULL) {
-		printf("%d, %d\n", n->index, n->type);
-		for (int i = 0; i < 10; i++) {
-			printf("%lu\n", n->data[i]);
-		}
-		printf("name %lu\n", n->name);
-		name nm = read_name(n->name);
-		printf("%s\n", nm->name);
-	}
+	
 }
 
 
@@ -55,7 +25,8 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 		return -ENOENT;
 	} else {
 		printf("-----find file %s\n", path);
-		if (n->type == 1) {
+		printf("-----is null inode %d\n", n->inode == NULL);
+		if (n->inode->type == 1) {
 			printf("-----it is dir\n");
 			stbuf->st_mode = S_IFDIR | 0777;
 			stbuf->st_nlink = 3;
@@ -103,6 +74,25 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 // }
 
 static int myfs_mkdir(const char* path, mode_t mode) {
+	unsigned long pos = find_free_inode();
+	node parent = find_node_parent(path);
+
+	inode in = malloc(sizeof(struct inode_s));
+	in->type = 1;
+	for (int i = 0; i < 0; i++) {
+		in->is_folder.nodes[i] = NULL;
+		// in->is_folder.names[i] = NULL;
+	}
+	in->next = NULL;
+
+	node n = malloc(sizeof(struct node_s));
+	n->index = pos;
+	n->inode = in;
+	save_node(n);
+
+	add_child(parent, n);
+	save_node(parent);
+
 	return 0;
 }
 
@@ -110,38 +100,34 @@ static int myfs_opendir(const char *path, struct fuse_file_info *fi) {
 	node n = find_node_by_name(path);
 	if (n == NULL) 
 		return -ENOENT;
+	if (n->inode->type != 1)
+		return -ENOENT;
 	return 0;
 }
  
 static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
 	node n = find_node_by_name(path);
 	printf("-------!!!!!!!!!!!--------read dir %s\n", path);
-	// if (n != NULL) {
-	// 	name test = read_name(n->name);
-	// 	if (test != NULL)
-	// 		printf("---------!!!!!!!!!------real name %s\n", n->name);
-	// 	else {
-	// 		printf("---------------!!!!!!!some error\n");
-	// 	}
-	// }
 	if (n == NULL) {
 		printf("-----can not find file %s\n", path);
 		return -ENOENT;
 	} else { 
-		filler(buf, ".", NULL, 0);
-		filler(buf, "..", NULL, 0);
-		for (int i = 0; i < 10 && n->data[i] != 0; i++) {
-			node ch = read_node(n->data[i]);
-			if (ch == NULL) 
-				return -ENOENT;
-			name nm = read_name(ch->name);
-			if (nm == NULL) 
-				return -ENOENT;
-			filler(buf, nm->name, NULL, 0);
-			free(nm);
-			free(ch);
+		if (n->inode->type == 1) {
+			filler(buf, ".", NULL, 0);
+			filler(buf, "..", NULL, 0);
+			for (int i = 0; i < 10; i++) {
+				if (n->inode->is_folder.nodes[i] != NULL)
+					filler(buf, n->inode->is_folder.names[i], NULL, 0);
+			}
+			while (n->inode->next != NULL) {
+				n = read_node(n->inode->next);
+				for (int i = 0; i < 10; i++) {
+				if (n->inode->is_folder.nodes[i] != NULL)
+					filler(buf, n->inode->is_folder.names[i], NULL, 0);	
+			}
+			return 0;
 		}
-		return 0;
+		return -ENOENT;
 	}
 }
  
@@ -161,34 +147,15 @@ static struct fuse_operations operations = {
 };
 
 int main(int argc, char *argv[]) {
-	load_fs();
-	// create_root();
-	open_root();
 
-	printf("size %lu, node %lu, name %lu, data %lu\n", size, node_start, name_start, data_start);
+	printf("base sizes\n");
+	printf("ifolder %d\n", sizeof(struct ifolder_s));
+	printf("ifile %d\n", sizeof(struct ifile_s));
+	printf("inode %d\n", sizeof(struct inode_s));
 
-	printf("compare %d \n", 0 != "\0");
 
-	printf("empty node %lu\n", find_empty_node());
-
-	// name n = malloc(sizeof(struct fs_name_s));
-	// n->index = name_start;
-	// n->name = "it_is_new_cool_dir";
-	// save_name(n);
-
-	// unsigned long new = find_empty_name();
-
-	// n->index = new;
-	// n->name = "it_is_second_cool_dir";
-	// save_name(n);
-
-	// free(n);
-	// n = read_name(name_start);
-	// printf("%s\n", n->name);
-
-	// free(n);
-	// n = read_name(new);
-	// printf("%s\n", n->name);
-
+	format();
+	loadfs();
+	print_node(read_node(fs_info.inode_start));
 	return fuse_main(argc, argv, &operations, NULL);
 }

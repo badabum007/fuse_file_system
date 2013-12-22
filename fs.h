@@ -3,45 +3,47 @@
 	
 #include <stdio.h>
 
-typedef struct fs_node_s * node;
-struct fs_node_s {
-	unsigned long index;
-	int type; //1 - directory, 2 - file, 0 - deleted
-	unsigned long name;
-	unsigned long data[10];
+typedef struct ifolder_s {
+	char names[10][32];
+	unsigned long nodes[10];
+}ifolder;
+
+typedef struct ifile_s {
+	unsigned long data[50];
+}ifile;
+
+typedef struct inode_s * inode;
+struct inode_s {
+	int type;
+	unsigned long next;
+	union {
+		ifolder is_folder;
+		ifile is_file;
+	};
 };
 
-typedef struct fs_name_s * name;
-struct fs_name_s
-{
+typedef struct node_s * node;
+struct node_s {
 	unsigned long index;
-	char* name;
+	inode inode;
 };
 
-struct fs_data_s {
-	unsigned long index;
-	char* data;
-};
+struct fs_info_s {
+	int inode_start;
+	int inode_size;
+	unsigned long dev_size;
+	unsigned long data_start;
+}fs_info;
 
-extern char* filesys;
-unsigned long node_start;
-int node_size;
-unsigned long name_start;
-int name_size;
-unsigned long data_start;
-int data_size;
-unsigned long size;
-
-char** split(char* path);
-FILE * open_fs();
-void load_fs();
-void save_node(node n);
+void format();
+void loadfs();
+void print_node(node n);
 node read_node(unsigned long index);
+void save_node(node n);
 node find_node_by_name(char* path);
-void save_name(name n);
-name read_name(unsigned long index);
-unsigned long find_empty_node();
-unsigned long find_empty_name();
-unsigned long find_empty_data();
+node find_node_parent(char* path);
+unsigned long find_free_inode();
+void add_child(node parent, node child);
+
 
 #endif
