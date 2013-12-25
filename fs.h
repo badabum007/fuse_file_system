@@ -26,6 +26,11 @@ typedef struct node_s * node;
 struct node_s {
 	unsigned long index;
 	inode inode;
+	node parent;
+	node next;
+	node childs[10];
+	char name[32];
+
 };
 
 struct fs_info_s {
@@ -35,6 +40,9 @@ struct fs_info_s {
 	unsigned long data_start;
 }fs_info;
 
+extern char* filesys;
+node fs_cash;
+
 void format();
 void loadfs();
 void print_node(node n);
@@ -42,8 +50,10 @@ node read_node(unsigned long index);
 void save_node(node n);
 node find_node_by_name(char* path);
 node find_node_parent(char* path);
-unsigned long find_free_inode();
+int find_free_inode();
 void add_child(node parent, node child);
+void cp_name(char* dest, char* source);
+char** split(char* path);
 
 
 #endif

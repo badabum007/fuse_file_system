@@ -74,8 +74,15 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 // }
 
 static int myfs_mkdir(const char* path, mode_t mode) {
-	unsigned long pos = find_free_inode();
+	int pos = find_free_inode();
 	node parent = find_node_parent(path);
+
+	char** names = split(path);
+	int i = 0, count = 0;
+	while(names[i++] != NULL) {
+		count++;
+	}
+	char* name = names[count - 1];
 
 	inode in = malloc(sizeof(struct inode_s));
 	in->type = 1;
@@ -88,6 +95,12 @@ static int myfs_mkdir(const char* path, mode_t mode) {
 	node n = malloc(sizeof(struct node_s));
 	n->index = pos;
 	n->inode = in;
+	n->parent = parent;
+	n->next = NULL;
+	for (int i = 0; i < 10; i++) {
+		n->childs[i] = NULL;
+	}
+	cp_name(n->name, name);
 	save_node(n);
 
 	add_child(parent, n);
@@ -115,16 +128,25 @@ static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 		if (n->inode->type == 1) {
 			filler(buf, ".", NULL, 0);
 			filler(buf, "..", NULL, 0);
-			for (int i = 0; i < 10; i++) {
-				if (n->inode->is_folder.nodes[i] != NULL)
-					filler(buf, n->inode->is_folder.names[i], NULL, 0);
-			}
-			while (n->inode->next != NULL) {
-				n = read_node(n->inode->next);
+			// for (int i = 0; i < 10; i++) {
+			// 	if (n->inode->is_folder.nodes[i] != NULL)
+			// 		filler(buf, n->inode->is_folder.names[i], NULL, 0);
+			// }
+			// while (n->inode->next != NULL) {
+			// 	n = read_node(n->inode->next);
+			// 	for (int i = 0; i < 10; i++) {
+			// 	if (n->inode->is_folder.nodes[i] != NULL)
+			// 		filler(buf, n->inode->is_folder.names[i], NULL, 0);	
+			// }
+			node n1 = n;
+			do {
 				for (int i = 0; i < 10; i++) {
-				if (n->inode->is_folder.nodes[i] != NULL)
-					filler(buf, n->inode->is_folder.names[i], NULL, 0);	
-			}
+					if (n->childs[i] != NULL)
+						filler(buf, n->childs[i]->name, NULL, 0);
+						// filler(buf, n->inode->is_folder.names[i], NULL, 0);
+				}
+				n = n->next;
+			} while (n != NULL);
 			return 0;
 		}
 		return -ENOENT;
@@ -146,6 +168,34 @@ static struct fuse_operations operations = {
 	// .mknod = myfs_mknod,
 };
 
+void test_mkdir() {
+	inode in = malloc(sizeof(struct inode_s));
+	in->type = 1;
+	for (int i = 0; i < 0; i++) {
+		in->is_folder.nodes[i] = NULL;
+		// in->is_folder.names[i] = NULL;
+	}
+	in->next = NULL;
+
+	node n = malloc(sizeof(struct node_s));
+	n->index = find_free_inode();
+	n->inode = in;
+	n->parent = fs_cash;
+	n->next = NULL;
+	for (int i = 0; i < 10; i++) {
+		n->childs[i] = NULL;
+	}
+	cp_name(n->name, "testdir");
+
+	save_node(n);
+	add_child(fs_cash, n);
+
+	printf("added to parent\n");
+	print_node(fs_cash);
+
+	save_node(fs_cash);
+}
+
 int main(int argc, char *argv[]) {
 
 	printf("base sizes\n");
@@ -154,8 +204,12 @@ int main(int argc, char *argv[]) {
 	printf("inode %d\n", sizeof(struct inode_s));
 
 
-	format();
+	// format();
 	loadfs();
-	print_node(read_node(fs_info.inode_start));
-	return fuse_main(argc, argv, &operations, NULL);
+	// test_mkdir();
+	// print_node(fs_cash);
+	// if (fs_cash != NULL)
+	// 	print_node(fs_cash);
+	find_free_inode();
+	return /*0;//*/ fuse_main(argc, argv, &operations, NULL);
 }
