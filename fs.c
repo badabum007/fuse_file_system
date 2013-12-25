@@ -8,28 +8,48 @@
 char* filesys = "./device";
 
 char** split(char* path) {
+	char* buf = malloc((strlen(path) + 1) * sizeof(char));
+	cp(buf, path);
 	char** res;
-	if (strlen(path) > 1) {
+	// printf("----IN SPLIT________-------%s\n", buf);
+	if (strlen(buf) > 1) {
 		int count = 0;
 		int i = 0;
-		while(path[i] != 0)
-			if (path[i++] == '/') 
+		// printf("----IN SPLIT________-------%s\n", buf);
+		while(buf[i] != 0)
+			if (buf[i++] == '/') 
 				count++;
+		// printf("----IN SPLIT________-------%s\n", buf);
 		res = malloc(sizeof(char*)*(count + 2));
 		res[count + 1] = 0;
 		res[0] = "/";
-		char* pointer = strtok(path, "/");
+		// printf("----IN SPLIT________-------%s\n", buf);
+		char* pointer = strtok(buf, "/");
 		i = 1;
+		// printf("----IN SPLIT________-------%s\n", buf);
 		while(pointer) {
 			res[i++] = pointer;
 			pointer = strtok(NULL, "/");
 		}
+		// printf("----IN SPLIT________-------%s\n", buf);
 	} else {
 		res = (char**)malloc(sizeof(char*)*2);
 		res[1] = 0;
 		res[0] = "/";
 	} 
+	// printf("----IN SPLIT________-------%s\n", buf);
 	return res;
+}
+
+void cp(char* dest, char* source) {
+	printf("copy name\n");
+	int len = strlen(source);
+	printf("source %s\n", source);
+	int i = 0;
+	for (; i < len; i++)
+		dest[i] = source[i];
+	 dest[i] = NULL;
+	printf("dest %s\n", dest);
 }
 
 void cp_name(char* dest, char* source) {

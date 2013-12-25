@@ -75,15 +75,21 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 
 static int myfs_mkdir(const char* path, mode_t mode) {
 	int pos = find_free_inode();
-	node parent = find_node_parent(path);
+
+	printf("!!PATH--------------%s\n", path);
 
 	char** names = split(path);
+	printf("!!PATH--------------%s\n", path);
 	int i = 0, count = 0;
 	while(names[i++] != NULL) {
+		printf("--------------%s\n", names[count]);
 		count++;
 	}
 	char* name = names[count - 1];
 
+	printf("--------------%s\n", name);
+
+	node parent = find_node_parent(path);
 	inode in = malloc(sizeof(struct inode_s));
 	in->type = 1;
 	for (int i = 0; i < 0; i++) {
