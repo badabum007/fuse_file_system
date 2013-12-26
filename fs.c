@@ -73,6 +73,7 @@ node read_nodes_tree(unsigned long index, node parent, char* name) {
 	inode p = in;
 	node head = malloc(sizeof(struct node_s));
 	node h = head;
+	h->parent = parent;
 	h->index = index;
 	h->inode = p;
 	cp_name(h->name, name);
@@ -228,7 +229,19 @@ void add_child(node parent, node child) {
 }
 
 void forget_child(node parent, node child) {
-
+	if (parent == NULL) return;
+	node n = parent;
+	do {
+		for (int i = 0; i < 10; i++) {
+			if (n->inode->is_folder.nodes[i] == child->index) {
+				n->inode->is_folder.nodes[i] = NULL;
+				n->childs[i] = NULL;
+				save_node(n);
+				return;
+			}
+		}
+		n = n->next;
+	} while(n != NULL);
 }
 
 node read_node(unsigned long index) {
@@ -265,10 +278,12 @@ unsigned long find_free_inode() {
 	return pos - fs_info.inode_size;
 }
 
-
 ////TODO
 void delete_node(node n) {
-	
+	forget_child(n->parent, n);
+	// if (n->inode->type == 1) {
+
+	// }
 }
 
 void del(node n) {
@@ -277,6 +292,9 @@ void del(node n) {
 
 node find_child_by_name(char* name, node parent) {
 	node n = parent;
+	TRACE("!~!~!!~!~!~!!~~~~~~~~~~~~~~~~");
+	TRACE(parent->name);
+	TRACE(name);
 	do {
 		for (int i = 0; i < 10; i++) {
 			if (n->childs[i] != NULL) {
@@ -296,6 +314,7 @@ node find_node_by_name(char* path) {
 		printf("-----path element: %d : %s\n", i-1, names[i-1]);
 		count++;
 	}
+	printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!COUNT %d\n", count);
 	if (count == 1) {
 		if (strcmp(path, "/") == 0) {
 			printf("-----is root, inode_start %d\n", fs_info.inode_start);

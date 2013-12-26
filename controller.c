@@ -136,9 +136,19 @@ static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	}
 }
  
-static int myfs_releasedir(const char *path, struct fuse_file_info *fi) {
+// static int myfs_releasedir(const char *path, struct fuse_file_info *fi) {
+// 	// node n = find_node_by_name(path);
+// 	// delete_node(n);
+// 	return 0;
+// }
+
+static int myfs_rmdir(const char *path) {
+	TRACE("rmdir");
 	node n = find_node_by_name(path);
+	TRACE("node finded");
+	print_node(n);
 	delete_node(n);
+	TRACE("rmdir complete");
 	return 0;
 }
 
@@ -148,7 +158,8 @@ static struct fuse_operations operations = {
 	.readdir 	= myfs_readdir,
 	.opendir 	= myfs_opendir,
 	.mkdir 		= myfs_mkdir,
-	.releasedir = myfs_releasedir
+	.rmdir      = myfs_rmdir
+	// .releasedir = myfs_releasedir
 	// .open = myfs_open,
 	// .create = myfs_create,
 	// .mknod = myfs_mknod,
