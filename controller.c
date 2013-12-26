@@ -33,12 +33,36 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 			return 0;
 		} else {
 			printf("-----it is file\n");
-			return -ENOENT;
+			stbuf->st_mode = S_IFREG | 0666;
+			stbuf->st_nlink = 1;
+			return 0;
 		}
 	}
 }
 
 static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+	int pos = find_free_inode();
+	TRACE(path);
+	char** names = split(path);
+	TRACE(path);
+	int i = 0, count = 0;
+	while(names[i++] != NULL) {
+		TRACE(names[count]);
+		count++;
+	}
+	char* name = names[count - 1];
+	TRACE("");
+	TRACE(path);
+
+	node parent = find_node_parent(path);
+	inode in = make_empty_inode(2);
+	TRACE("");
+	node n = make_node_from_empty_inode(in, pos);
+	TRACE("");
+	cp_name(n->name, name);
+	TRACE("");
+	add_child(parent, n);
+	TRACE("");
 	return 0;
 }
 
@@ -153,10 +177,10 @@ static struct fuse_operations operations = {
 	.readdir 	= myfs_readdir,
 	.opendir 	= myfs_opendir,
 	.mkdir 		= myfs_mkdir,
-	.rmdir      = myfs_rmdir
+	.rmdir      = myfs_rmdir,
 	// .releasedir = myfs_releasedir
 	// .open = myfs_open,
-	// .create = myfs_create,
+	.create = myfs_create
 	// .mknod = myfs_mknod,
 };
 
