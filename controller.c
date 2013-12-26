@@ -134,16 +134,6 @@ static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 		if (n->inode->type == 1) {
 			filler(buf, ".", NULL, 0);
 			filler(buf, "..", NULL, 0);
-			// for (int i = 0; i < 10; i++) {
-			// 	if (n->inode->is_folder.nodes[i] != NULL)
-			// 		filler(buf, n->inode->is_folder.names[i], NULL, 0);
-			// }
-			// while (n->inode->next != NULL) {
-			// 	n = read_node(n->inode->next);
-			// 	for (int i = 0; i < 10; i++) {
-			// 	if (n->inode->is_folder.nodes[i] != NULL)
-			// 		filler(buf, n->inode->is_folder.names[i], NULL, 0);	
-			// }
 			node n1 = n;
 			do {
 				for (int i = 0; i < 10; i++) {
@@ -210,7 +200,7 @@ int main(int argc, char *argv[]) {
 	printf("inode %d\n", sizeof(struct inode_s));
 
 
-	// format();
+	 // format();
 	loadfs();
 	// test_mkdir();
 	// print_node(fs_cash);

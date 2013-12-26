@@ -75,7 +75,7 @@ node read_nodes_tree(unsigned long index) {
 			for (int i = 0; i < 10; i++) {
 				if (n->inode->is_folder.nodes[i] != NULL) {
 					printf("read child with index %lu, name %s\n", n->inode->is_folder.nodes[i], n->inode->is_folder.names[i]);
-					n->childs[i] = read_node(n->inode->is_folder.nodes[i]);
+					n->childs[i] = read_nodes_tree(n->inode->is_folder.nodes[i]);
 					// n->childs[i]->name = n->inode->is_folder.names[i];
 					cp_name(n->childs[i]->name, n->inode->is_folder.names[i]);
 					n->childs[i]->parent = n;
