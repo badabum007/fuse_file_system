@@ -38,12 +38,13 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 	}
 }
 
-// static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
-// }
+static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+	return 0;
+}
 
-// static int myfs_open(const char *path, struct fuse_file_info *fi) {
-// 	return 0;
-// }
+static int myfs_open(const char *path, struct fuse_file_info *fi) {
+	return 0;
+}
 
 // static int myfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 // 	return 0;
@@ -135,12 +136,6 @@ static int myfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 		return -ENOENT;
 	}
 }
- 
-// static int myfs_releasedir(const char *path, struct fuse_file_info *fi) {
-// 	// node n = find_node_by_name(path);
-// 	// delete_node(n);
-// 	return 0;
-// }
 
 static int myfs_rmdir(const char *path) {
 	TRACE("rmdir");

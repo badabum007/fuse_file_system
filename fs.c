@@ -281,13 +281,25 @@ unsigned long find_free_inode() {
 ////TODO
 void delete_node(node n) {
 	forget_child(n->parent, n);
-	// if (n->inode->type == 1) {
-
-	// }
+	free_node(n);
 }
 
-void del(node n) {
-	
+void free_node(node n) {
+	do {
+		n->inode->type = 0;
+		save_node(n);
+		if (n->inode->type == 1) {
+			for (int i = 0; i < 0; i++) {
+				if (n->childs[i] != NULL) {
+					free_node(n->childs[i]);
+				}
+			}
+		}
+		free(n->inode);
+		node next = n->next;
+		free(n);
+		n = next;
+	} while (n != NULL);
 }
 
 node find_child_by_name(char* name, node parent) {
