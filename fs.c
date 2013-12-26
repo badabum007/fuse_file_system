@@ -11,33 +11,27 @@ char** split(char* path) {
 	char* buf = malloc((strlen(path) + 1) * sizeof(char));
 	cp(buf, path);
 	char** res;
-	// printf("----IN SPLIT________-------%s\n", buf);
 	if (strlen(buf) > 1) {
 		int count = 0;
 		int i = 0;
-		// printf("----IN SPLIT________-------%s\n", buf);
 		while(buf[i] != 0)
 			if (buf[i++] == '/') 
 				count++;
-		// printf("----IN SPLIT________-------%s\n", buf);
 		res = malloc(sizeof(char*)*(count + 2));
 		res[count + 1] = 0;
 		res[0] = "/";
-		// printf("----IN SPLIT________-------%s\n", buf);
 		char* pointer = strtok(buf, "/");
 		i = 1;
-		// printf("----IN SPLIT________-------%s\n", buf);
 		while(pointer) {
 			res[i++] = pointer;
 			pointer = strtok(NULL, "/");
 		}
-		// printf("----IN SPLIT________-------%s\n", buf);
 	} else {
 		res = (char**)malloc(sizeof(char*)*2);
 		res[1] = 0;
 		res[0] = "/";
 	} 
-	// printf("----IN SPLIT________-------%s\n", buf);
+	// free(buf);
 	return res;
 }
 
@@ -64,28 +58,35 @@ void cp_name(char* dest, char* source) {
 	printf("dest %s\n", dest);
 }
 
-node read_nodes_tree(unsigned long index) {
-	node root = read_node(index);
-	node n = root;
-	if (n == NULL) return NULL;
-	if (n->inode->type == 1) {
-		printf("read folder\n");
-		do {
-			printf("iter!\n");
-			for (int i = 0; i < 10; i++) {
-				if (n->inode->is_folder.nodes[i] != NULL) {
-					printf("read child with index %lu, name %s\n", n->inode->is_folder.nodes[i], n->inode->is_folder.names[i]);
-					n->childs[i] = read_nodes_tree(n->inode->is_folder.nodes[i]);
-					// n->childs[i]->name = n->inode->is_folder.names[i];
-					cp_name(n->childs[i]->name, n->inode->is_folder.names[i]);
-					n->childs[i]->parent = n;
-				}
+node read_nodes_tree(unsigned long index, node parent, char* name) {
+	if (index == NULL) return NULL;
+	TRACE("read inode");
+	inode in = read_inode(index);
+	TRACE("node readed");
+	if (in == NULL) {
+		TRACE("!!readed node is NULL");
+		return NULL;	
+	} 
+	TRACE("node not null");
+	printf("type %d", in->type);
+	TRACE("type printed");
+	inode p = in;
+	node head = malloc(sizeof(struct node_s));
+	node h = head;
+	h->index = index;
+	h->inode = p;
+	cp_name(h->name, name);
+	h->next = read_nodes_tree(p->next, parent, name);
+	if (p->type == 1) {
+		for (int i = 0; i < 10; i++) {
+			if (p->is_folder.nodes[i] != NULL) {
+				h->childs[i] = read_nodes_tree(p->is_folder.nodes[i], head, p->is_folder.names[i]);
+			} else {
+				h->childs[i] = NULL;
 			}
-			n->next = read_node(n->inode->next);
-			n = n->next;
-		} while (n != NULL);
+		}
 	}
-	return root;
+	return h;
 }
 
 FILE* open_fs() {
@@ -96,33 +97,71 @@ FILE* open_fs() {
 
 void loadfs() {
 	FILE * fs = open_fs();
+	TRACE("");
 	fread(&fs_info, sizeof(struct fs_info_s), 1, fs);
 	printf("readed size %d, start %d\n", fs_info.inode_size, fs_info.inode_start);
 	printf("readed data_start %lu, dev_size %lu\n", fs_info.data_start, fs_info.dev_size);
-	fs_cash = read_nodes_tree(fs_info.inode_start);
-	fs_cash->name[0] = '/';
-	fs_cash->name[1] = NULL;
+	TRACE("");
+	fs_cash = read_nodes_tree(fs_info.inode_start, NULL, "/");
+	TRACE("readed fs");
+	// fs_cash->name[0] = '/';
+	// fs_cash->name[1] = NULL;
+	TRACE("start print");
 	print_node(fs_cash);
+	TRACE("printed");
 	fclose(fs);
+	TRACE("");
+}
+
+inode make_empty_inode(int type) {
+	inode in = malloc(sizeof(struct inode_s));
+	in->type = type;
+	in->next = NULL;
+	if (type == 1) {
+		for (int i = 0; i < 10; i++) {
+			in->is_folder.nodes[i] = NULL;
+		}
+	} else if (type == 2) {
+		for (int i = 0; i < 50; i++) {
+			in->is_file.data[i] = NULL;
+		}
+	} else {
+		return NULL;
+	}
+	return in;
+}
+
+node make_node_from_empty_inode(inode in, unsigned long index) {
+	node head = malloc(sizeof(struct node_s));
+	head->index = index;
+	head->inode = in;
+	head->parent = NULL;
+	head->next = NULL;
+	for (int i = 0; i < 10; i++) {
+		head->childs[i] = NULL;
+	}
+	return head;
+}
+
+node make_new_node_from_empty_inode(inode in) {
+	return make_node_from_empty_inode(in, find_free_inode());
 }
 
 void format() {
 	FILE * fs = open_fs();
+	TRACE("");
 	// int zero = 0x00000000;
 	int zero = NULL;
 	fpos_t pos;
 	fgetpos(fs, &pos);
-	// while (!feof(fs)) {
-	// 	fwrite(&zero, 4, 1, fs);
-	// 	printf("%d\n", pos);
-	// }
-	for (int i = 0; i < 100000; i++) {
-		fwrite(&zero, 4, 1, fs);
-	}
 
 	fseek(fs,0,SEEK_END);   
 	unsigned long size = ftell(fs); 
-
+	fseek(fs,0,SEEK_SET);   
+	for (unsigned long i = 0; i < size; i+=4) {
+		fwrite(&zero, 4, 1, fs);
+	}
+	TRACE("fomated");
 	fseek(fs, 0, SEEK_SET);
 	fs_info.inode_size = sizeof(struct inode_s);
 	fs_info.inode_start = sizeof(struct fs_info_s);
@@ -130,92 +169,91 @@ void format() {
 	fs_info.data_start = (unsigned long)(size * 0.05);
 	printf("written size %d, start %d\n", fs_info.inode_size, fs_info.inode_start);
 	fwrite(&fs_info, sizeof(struct fs_info_s), 1, fs);
+	TRACE("fs info written");
 
-	inode in = malloc(sizeof(struct inode_s));
-	in->type = 1;
-	for (int i = 0; i < 0; i++) {
-		in->is_folder.nodes[i] = NULL;
-		// in->is_folder.names[i] = NULL;
-	}
-	in->next = NULL;
+	inode in = make_empty_inode(1);
+	TRACE("");
 
-	node n = malloc(sizeof(struct node_s));
-	n->index = fs_info.inode_start;
-	n->inode = in;
+	node n = make_node_from_empty_inode(in, fs_info.inode_start);
+	print_node(n);
+	TRACE("");
 	save_node(n);
+	TRACE("");
+	print_node(n);
 
 	fclose(fs);
+	TRACE("format successful");
 }
 
 void save_node(node n) {
-	printf("\n\nsave node");
 	FILE * fs = open_fs();
 	fseek(fs, n->index, SEEK_SET);
-	printf("index %lu\n", n->index);
-	print_node(n);
 	fwrite(n->inode, sizeof(struct inode_s), 1, fs);
-	printf("type = %d\n", n->inode->type);
 	fclose(fs);
-	print_node(read_node(n->index));
+}
+
+inode read_inode(unsigned long index) {
+	TRACE("read inode");
+    if (index == NULL) {
+    	TRACE("index null");
+        return NULL;
+    }
+    TRACE("index not null");
+	FILE * fs = open_fs();
+	fseek(fs, index, SEEK_SET);
+	inode in = malloc(sizeof(struct inode_s));
+    fread(in, sizeof(struct inode_s), 1, fs);
+	TRACE("inode readed");
+    if (in->type == 0) {
+    	TRACE("inode type is null");
+    	return NULL;
+    }
+    TRACE("inode type not null");
+    printf("readed inode type is %d\n", in->type);
+	fclose(fs);
+	return in;
 }
 
 void add_child(node parent, node child) {
-	printf("\n\nadd child %d\n", child->index);
-	print_node(parent);
 	int i = 0;
-	while (parent->childs[i] != NULL && i < 10) i++;
-	if (i == 10) //new node;
-	printf("added index %d\n", i);
-	parent->childs[i] = child;
-	parent->inode->is_folder.nodes[i] = child->index;
-	// parent->inode->is_folder.names[i] = child->name;
-	cp_name(parent->inode->is_folder.names[i], child->name);
+	while (i < 10 && parent->childs[i] != NULL) i++;
+	if (i < 10) {
+		parent->childs[i] = child;
+		child->parent = parent;
+		parent->inode->is_folder.nodes[i] = child->index;
+		cp_name(parent->inode->is_folder.names[i], child->name);
+		save_node(child);
+		save_node(parent);
+	}
+}
+
+void forget_child(node parent, node child) {
+
 }
 
 node read_node(unsigned long index) {
-	if (index == NULL) {
-		return NULL;
-	}
-	FILE * fs = open_fs();
-	fseek(fs, index, SEEK_SET);
-	node n = malloc(sizeof(struct node_s));
-	n->index = index;
-	inode in = malloc(sizeof(struct inode_s));
-	fread(in, sizeof(struct inode_s), 1, fs);
-	if (in->type == 0) return NULL;
-	n->inode = in;
-	n->parent = NULL;
-	n->next= NULL;
-	for (int i = 0; i < 10; i++)
-		n->childs[i] = NULL;
-	printf("type = %d\n", in->type);
-	fclose(fs);
-	return n;
+	
 }
 
 void print_node(node n) {
-	printf("\n\nprint node with index %d\n", n->index);
-	printf("has next %d\n", n->inode->next != NULL);
+	printf("print node\n");
+	printf("~index: %lu\n", n->index);
+	printf("~name: %s\n", n->name);
 	if (n->inode->type == 1) {
-		printf("is folder\n");
+		printf("~is directory\n");
 		for (int i = 0; i < 10; i++) {
-			printf("node:child index %d, is null %d\n", i, n->childs[i] == NULL);
-			if (n->inode->is_folder.nodes[i] != NULL) {
-				printf("inode:child index %lu, name %s\n", n->inode->is_folder.nodes[i], n->inode->is_folder.names[i]);
-			}
+			printf("~~node child [%d] is null %d\n", i, n->childs[i] == NULL);
+			printf("~~node child from inode [%d] is null %d\n", i, n->inode->is_folder.nodes[i] == NULL);
+			if (n->inode->is_folder.nodes[i] != NULL) 
+				printf("~~name child [%d] %s\n", i, n->inode->is_folder.names[i]);
 		}
-
-	} else if (n->inode->type == 2) {
-		printf("is file\n");
-	} else {
-		printf("deleted\n");
 	}
 }
 
-int find_free_inode() {
+unsigned long find_free_inode() {
 	FILE * fs = open_fs();
 	fseek(fs, fs_info.inode_start, SEEK_SET);
-	int pos = fs_info.inode_start;
+	unsigned long pos = fs_info.inode_start;
 	int stat;
 	do {
 		printf("try %d \n", pos);
@@ -227,6 +265,15 @@ int find_free_inode() {
 	return pos - fs_info.inode_size;
 }
 
+
+////TODO
+void delete_node(node n) {
+	
+}
+
+void del(node n) {
+	
+}
 
 node find_child_by_name(char* name, node parent) {
 	node n = parent;
