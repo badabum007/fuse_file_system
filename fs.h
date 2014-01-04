@@ -18,7 +18,9 @@ typedef struct ifolder_s {
 }ifolder;
 
 typedef struct ifile_s {
-	unsigned long data[50];
+	int used_count;
+	int total_size;
+	unsigned long data[49];	
 }ifile;
 
 typedef struct inode_s * inode;
@@ -29,6 +31,13 @@ struct inode_s {
 		ifolder is_folder;
 		ifile is_file;
 	};
+};
+
+typedef struct file_node_s * file_node;
+struct file_node_s
+{
+	char data[128];
+	int size;
 };
 
 typedef struct node_s * node;
@@ -45,6 +54,7 @@ struct node_s {
 struct fs_info_s {
 	int inode_start;
 	int inode_size;
+	int data_node_size;
 	unsigned long dev_size;
 	unsigned long data_start;
 }fs_info;
@@ -67,6 +77,9 @@ void delete_node(node n);
 inode read_inode(unsigned long index);
 inode make_empty_inode(int type);
 node make_node_from_empty_inode(inode in, unsigned long index);
+file_node make_empty_data_node();
+void save_data_node(file_node n, unsigned long index);
+file_node load_data_node(unsigned long index);
 
 
 

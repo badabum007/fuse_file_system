@@ -35,6 +35,7 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 			printf("-----it is file\n");
 			stbuf->st_mode = S_IFREG | 0666;
 			stbuf->st_nlink = 1;
+			stbuf->st_size = n->inode->is_file.total_size;
 			return 0;
 		}
 	}
@@ -67,16 +68,90 @@ static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 }
 
 static int myfs_open(const char *path, struct fuse_file_info *fi) {
+	node n = find_node_by_name(path);
+	if (n == NULL) 
+		return -ENOENT;
+	if (n->inode->type != 2)
+		return -ENOENT;
 	return 0;
 }
 
-// static int myfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-// 	return 0;
-// }
+static int myfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+	TRACE("READ START++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+	printf("---------##size %d, offset %d \n", size, offset);
+	 node file = find_node_by_name(path);
+	if (file->inode->type != 2) {
+		TRACE("NOT IS FILE");
+		return -ENOENT;
+	}
+	if (file->inode->is_file.data[0] == NULL) {
+		TRACE("DATA IS NOT EXISTS");
+		return 0;
+	}
+	file_node n = load_data_node(file->inode->is_file.data[0]);
+	if (n == NULL) {
+		TRACE("READ ERROR");
+		return 0;
+	}
+	if (n->size == 0) {
+		TRACE("EMPTY DATA");
+		return 0;
+	}
+	TRACE("ALL GOOd");
+	size_t len = n->size;
+	if (offset < len) {
+		TRACE("GOOD OFFSET");
+		if (offset + size > len)
+			size = len - offset;
+		memcpy(buf, n->data, size);
+		TRACE("DATA SENDED");
+	} else
+		size = 0;
+	TRACE("READ END++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+	return size;
+}
 
-// static int myfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-//  return 0;
-// }
+static int myfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+	TRACE("WRITE START++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+	printf("---------##size %d, offset %d \n", size, offset);
+	node file = find_node_by_name(path);
+	if (file->inode->type != 2) {
+		TRACE("NOT A FILE");
+		return -ENOENT;
+	}
+	file_node n;
+	if (file->inode->is_file.data[0] == NULL) {
+		TRACE("NEW FILE");
+		n = make_empty_data_node();
+		file->inode->is_file.data[0] = find_free_data_node();
+		printf("+++++++++index %d \n", file->inode->is_file.data[0]);
+		TRACE("SPACE FINDED");
+	}
+	else {
+		TRACE("LOAD FILE");
+		n = load_data_node(file->inode->is_file.data[0]);
+	}
+	if (n == NULL) {
+		TRACE("ERROR LOAD");
+		return 0;
+	}
+	//debug
+		if (size > 128) size = 128;
+	//debug
+	memcpy(n->data, buf, size);
+	// memcpy(n->data, "Hello", 5);
+	// n->size = 5;
+	n->size = size;
+	printf("====================================written size %d\n", n->size);
+	file->inode->is_file.total_size = size;
+	file->inode->is_file.used_count = 1;
+	save_node(file);
+	save_data_node(n, file->inode->is_file.data[0]);
+	// return size;
+	TRACE("PARENT SAVED");
+	TRACE("WRITE END++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+	return size;
+}
 
 // static int myfs_truncate(const char *path, off_t a) {
 //  return 0;
@@ -179,8 +254,10 @@ static struct fuse_operations operations = {
 	.mkdir 		= myfs_mkdir,
 	.rmdir      = myfs_rmdir,
 	// .releasedir = myfs_releasedir
-	// .open = myfs_open,
-	.create = myfs_create
+	.open       = myfs_open,
+	.create     = myfs_create,
+	.read 		= myfs_read,
+	.write 		= myfs_write
 	// .mknod = myfs_mknod,
 };
 
@@ -220,7 +297,7 @@ int main(int argc, char *argv[]) {
 	printf("inode %d\n", sizeof(struct inode_s));
 
 
-	// format();
+	format();
 	loadfs();
 	// test_mkdir();
 	// print_node(fs_cash);

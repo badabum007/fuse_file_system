@@ -6,6 +6,7 @@
 #include <string.h>
 
 char* filesys = "./device";
+// char* filesys = "/dev/sdc4";
 
 char** split(char* path) {
 	char* buf = malloc((strlen(path) + 1) * sizeof(char));
@@ -123,9 +124,11 @@ inode make_empty_inode(int type) {
 			in->is_folder.nodes[i] = NULL;
 		}
 	} else if (type == 2) {
-		for (int i = 0; i < 50; i++) {
+		for (int i = 0; i < 49; i++) {
 			in->is_file.data[i] = NULL;
 		}
+		in->is_file.used_count = 0;
+		in->is_file.total_size = 0;
 	} else {
 		return NULL;
 	}
@@ -148,6 +151,33 @@ node make_new_node_from_empty_inode(inode in) {
 	return make_node_from_empty_inode(in, find_free_inode());
 }
 
+file_node make_empty_data_node() {
+	file_node fn = malloc(sizeof(struct file_node_s));
+	for (int i = 0; i < 128; i++) 
+		fn->data[i] = NULL;
+	fn->size = 0;
+}
+
+void save_data_node(file_node n, unsigned long index) {
+	FILE * fs = open_fs();
+	fseek(fs, index, SEEK_SET);
+	fwrite(n, sizeof(struct file_node_s), 1, fs);
+	fclose(fs);
+}
+
+file_node load_data_node(unsigned long index) {
+	FILE * fs = open_fs();
+	file_node n = malloc(sizeof(struct file_node_s));
+	fseek(fs, index, SEEK_SET);
+	int stat;
+	fread(&stat, 4, 1, fs);
+	if (stat == NULL) return NULL;
+	fseek(fs, index, SEEK_SET);
+	fread(n, sizeof(struct file_node_s), 1, fs);
+	fclose(fs);
+	return n;
+}
+
 void format() {
 	FILE * fs = open_fs();
 	TRACE("");
@@ -167,6 +197,7 @@ void format() {
 	fs_info.inode_size = sizeof(struct inode_s);
 	fs_info.inode_start = sizeof(struct fs_info_s);
 	fs_info.dev_size = size;
+	fs_info.data_node_size = sizeof(struct file_node_s);
 	fs_info.data_start = (unsigned long)(size * 0.05);
 	printf("written size %d, start %d\n", fs_info.inode_size, fs_info.inode_start);
 	fwrite(&fs_info, sizeof(struct fs_info_s), 1, fs);
@@ -189,7 +220,12 @@ void format() {
 void save_node(node n) {
 	FILE * fs = open_fs();
 	fseek(fs, n->index, SEEK_SET);
-	fwrite(n->inode, sizeof(struct inode_s), 1, fs);
+	if (n->inode->type != 0)
+		fwrite(n->inode, sizeof(struct inode_s), 1, fs);
+	else {
+		int stat = NULL;
+		fwrite(&stat, 4, 1, fs);
+	}
 	fclose(fs);
 }
 
@@ -226,6 +262,35 @@ void add_child(node parent, node child) {
 		save_node(child);
 		save_node(parent);
 	}
+}
+
+// file_node read_file_node(unsigned long index) {
+
+// }
+
+// void save_file_node(file_node n) {
+
+// }
+
+int write_data(node n, char *buf, size_t size, off_t offset) {
+	// int bl = (int)(offset / 128);
+	// printf("++++++++++++++++++++++++++++++blocks offset %d\n", bl);
+	// if (bl >= 50) return 0;
+	// offset = offset - bl * 128;
+	// int fsize = 128 - offset;
+	// if (fsize < size) {
+	// 	file_node fn = read_file_node(n->inode->is_file.data[bl]);
+	// 	memcpy(buf, fn->data + offset, fsize);
+	// 	save_node(fn);
+	// 	return size;
+	// } else {
+	// 	;
+	// }
+
+}
+
+int read_data(node n, char *buf, size_t size, off_t offset) {
+
 }
 
 void forget_child(node parent, node child) {
@@ -276,6 +341,21 @@ unsigned long find_free_inode() {
 	} while (stat != NULL);
 	fclose(fs);
 	return pos - fs_info.inode_size;
+}
+
+unsigned long find_free_data_node() {
+	FILE * fs = open_fs();
+	fseek(fs, fs_info.data_start, SEEK_SET);
+	unsigned long pos = fs_info.data_start;
+	int stat;
+	do {
+		printf("try %d \n", pos);
+		fread(&stat, 4, 1, fs);
+		pos += fs_info.data_node_size;
+		fseek(fs, pos, SEEK_SET);
+	} while (stat != NULL);
+	fclose(fs);
+	return pos - fs_info.data_node_size;
 }
 
 ////TODO
