@@ -188,10 +188,6 @@ void format() {
 
 	fseek(fs,0,SEEK_END);   
 	unsigned long size = ftell(fs); 
-	fseek(fs,0,SEEK_SET);   
-	for (unsigned long i = 0; i < size; i+=4) {
-		fwrite(&zero, 4, 1, fs);
-	}
 	TRACE("fomated");
 	fseek(fs, 0, SEEK_SET);
 	fs_info.inode_size = sizeof(struct inode_s);
@@ -202,6 +198,31 @@ void format() {
 	printf("written size %d, start %d\n", fs_info.inode_size, fs_info.inode_start);
 	fwrite(&fs_info, sizeof(struct fs_info_s), 1, fs);
 	TRACE("fs info written");
+
+	float last = 0, old = 0;
+	for (unsigned long i = fs_info.inode_start; i < fs_info.data_start; i+=fs_info.inode_size) {
+		fseek(fs,i,SEEK_SET);  
+		fwrite(&zero, 4, 1, fs);
+		float cur = ((float)i / fs_info.data_start) * 100;
+		// last += cur - old;
+		// if (cur - last > 0.5) {
+			printf("formating inode part: %f%%\n", cur);
+			// last = 0;
+		// }
+		// old = cur;
+	}
+	last = 0;
+	for (unsigned long i = fs_info.data_start; i < fs_info.dev_size; i+=fs_info.data_node_size) {
+		fseek(fs,i,SEEK_SET);
+		fwrite(&zero, 4, 1, fs);
+		float cur = ((float)i / fs_info.dev_size) * 100;
+		// last += cur - last;
+		// if (cur - last > 0.5) {
+			printf("formating data part: %f%%\n", cur);
+			// last = 0;
+		// }
+		// old = cur;
+	}
 
 	inode in = make_empty_inode(1);
 	TRACE("");
@@ -293,9 +314,12 @@ int read_data(node n, char *buf, size_t size, off_t offset) {
 
 }
 
+
+
 void forget_child(node parent, node child) {
 	if (parent == NULL) return;
 	node n = parent;
+	if (parent->inode->type != 1) return;
 	do {
 		for (int i = 0; i < 10; i++) {
 			if (n->inode->is_folder.nodes[i] == child->index) {
@@ -366,8 +390,6 @@ void delete_node(node n) {
 
 void free_node(node n) {
 	do {
-		n->inode->type = 0;
-		save_node(n);
 		if (n->inode->type == 1) {
 			for (int i = 0; i < 0; i++) {
 				if (n->childs[i] != NULL) {
@@ -375,6 +397,8 @@ void free_node(node n) {
 				}
 			}
 		}
+		n->inode->type = 0;
+		save_node(n);
 		free(n->inode);
 		node next = n->next;
 		free(n);

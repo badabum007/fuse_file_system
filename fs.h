@@ -7,7 +7,6 @@
 
 #ifdef DEBUG
 	#define TRACE(a) printf(">>DEBUG>>line: %d, mess: %s\n", __LINE__, a);
-	//#define PRINT(k, v) printf(">>DEBUG>> %s, mess: %s\n", __LINE__, a);
 #else
 	#define TRACE(a)
 #endif
