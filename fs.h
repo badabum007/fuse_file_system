@@ -11,6 +11,8 @@
 	#define TRACE(a)
 #endif
 
+#define DATASIZE 4096
+
 typedef struct ifolder_s {
 	char names[10][32];
 	unsigned long nodes[10];
@@ -35,7 +37,7 @@ struct inode_s {
 typedef struct file_node_s * file_node;
 struct file_node_s
 {
-	char data[128];
+	char data[DATASIZE];
 	int size;
 };
 

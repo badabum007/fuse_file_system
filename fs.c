@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-char* filesys = "./device";
+char* filesys = "/home/medvedmike/Dropbox/VSU/operating_systems/fs/bin/device";
 // char* filesys = "/dev/sdc4";
 
 char** split(char* path) {
@@ -61,16 +61,16 @@ void cp_name(char* dest, char* source) {
 
 node read_nodes_tree(unsigned long index, node parent, char* name) {
 	if (index == NULL) return NULL;
-	TRACE("read inode");
+	// TRACE("read inode");
 	inode in = read_inode(index);
-	TRACE("node readed");
+	// TRACE("node readed");
 	if (in == NULL) {
 		TRACE("!!readed node is NULL");
 		return NULL;	
 	} 
-	TRACE("node not null");
-	printf("type %d", in->type);
-	TRACE("type printed");
+	// TRACE("node not null");
+	// printf("type %d", in->type);
+	// TRACE("type printed");
 	inode p = in;
 	node head = malloc(sizeof(struct node_s));
 	node h = head;
@@ -99,20 +99,20 @@ FILE* open_fs() {
 
 void loadfs() {
 	FILE * fs = open_fs();
-	TRACE("");
+	// TRACE("");
 	fread(&fs_info, sizeof(struct fs_info_s), 1, fs);
 	printf("readed size %d, start %d\n", fs_info.inode_size, fs_info.inode_start);
 	printf("readed data_start %lu, dev_size %lu\n", fs_info.data_start, fs_info.dev_size);
 	TRACE("");
 	fs_cash = read_nodes_tree(fs_info.inode_start, NULL, "/");
-	TRACE("readed fs");
+	// TRACE("readed fs");
 	// fs_cash->name[0] = '/';
 	// fs_cash->name[1] = NULL;
-	TRACE("start print");
-	print_node(fs_cash);
-	TRACE("printed");
+	// TRACE("start print");
+	// print_node(fs_cash);
+	// TRACE("printed");
 	fclose(fs);
-	TRACE("");
+	// TRACE("");
 }
 
 inode make_empty_inode(int type) {
@@ -153,7 +153,7 @@ node make_new_node_from_empty_inode(inode in) {
 
 file_node make_empty_data_node() {
 	file_node fn = malloc(sizeof(struct file_node_s));
-	for (int i = 0; i < 128; i++) 
+	for (int i = 0; i < DATASIZE; i++) 
 		fn->data[i] = NULL;
 	fn->size = 0;
 }
@@ -228,11 +228,11 @@ void format() {
 	TRACE("");
 
 	node n = make_node_from_empty_inode(in, fs_info.inode_start);
-	print_node(n);
+	// print_node(n);
 	TRACE("");
 	save_node(n);
 	TRACE("");
-	print_node(n);
+	// print_node(n);
 
 	fclose(fs);
 	TRACE("format successful");
@@ -251,23 +251,23 @@ void save_node(node n) {
 }
 
 inode read_inode(unsigned long index) {
-	TRACE("read inode");
+	// TRACE("read inode");
     if (index == NULL) {
     	TRACE("index null");
         return NULL;
     }
-    TRACE("index not null");
+    // TRACE("index not null");
 	FILE * fs = open_fs();
 	fseek(fs, index, SEEK_SET);
 	inode in = malloc(sizeof(struct inode_s));
     fread(in, sizeof(struct inode_s), 1, fs);
-	TRACE("inode readed");
+	// TRACE("inode readed");
     if (in->type == 0) {
     	TRACE("inode type is null");
     	return NULL;
     }
-    TRACE("inode type not null");
-    printf("readed inode type is %d\n", in->type);
+    // TRACE("inode type not null");
+    // printf("readed inode type is %d\n", in->type);
 	fclose(fs);
 	return in;
 }
