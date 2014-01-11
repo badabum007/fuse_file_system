@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-char* filesys = "/home/medvedmike/Dropbox/VSU/operating_systems/fs/bin/device";
+char* filesys = "./device";
 // char* filesys = "/dev/sdc4";
 
 char** split(char* path) {
@@ -136,14 +136,21 @@ inode make_empty_inode(int type) {
 }
 
 node make_node_from_empty_inode(inode in, unsigned long index) {
+	TRACE("")
 	node head = malloc(sizeof(struct node_s));
+	TRACE("")
 	head->index = index;
+	TRACE("")
 	head->inode = in;
+	TRACE("")
 	head->parent = NULL;
+	TRACE("")
 	head->next = NULL;
+	TRACE("")
 	for (int i = 0; i < 10; i++) {
 		head->childs[i] = NULL;
 	}
+	TRACE("")
 	return head;
 }
 

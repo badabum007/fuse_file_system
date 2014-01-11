@@ -91,45 +91,62 @@ static int myfs_read(const char *path, char *buf, size_t size, off_t offset, str
 		TRACE("NOT IS FILE");
 		return -ENOENT;
 	}
+	TRACE("")
+	printf("-------------------------------------------------------base offset %d\n", offset);
 
 	int block_num, node_num;
 	int node_capacity = DATASIZE * 49;
+	printf("-------------------------------------------------------node capacity %d\n", node_capacity);
 	node_num = offset / node_capacity;
 	offset -= node_num * node_capacity;
 
+	printf("-------------------------------------------------------node_num %d\n", node_num);
+	printf("-------------------------------------------------------new offset %d\n", offset);
+
+	TRACE("")
 	block_num = offset / DATASIZE;
 	offset -= block_num * DATASIZE;
-
+	TRACE("")
+	printf("-------------------------------------------------------block_num %d\n", block_num);
+	printf("-------------------------------------------------------new offset %d\n", offset);
 	int nind = node_num;
-
+	TRACE("")
 	while (nind > 0) {
-		if (file->next == NULL) return 0;
+		if (file->next == NULL) {
+			TRACE("next null")
+			return 0;
+		}
+		TRACE("")
 		file = file->next;
+		nind--;
 	}
+	TRACE("")
 	if (file->inode->is_file.data[block_num] == NULL) {
 		TRACE("MAIN IS NOT EXISTS");
 		return 0;
 	}
+	TRACE("")
 	file_node n = load_data_node(file->inode->is_file.data[block_num]);
 	if (n == NULL) {
 		TRACE("READ ERROR");
 		return 0;
 	}
+	TRACE("")
 	if (n->size == 0) {
 		TRACE("EMPTY DATA");
 		return 0;
 	}
-
+	TRACE("")
 	TRACE("ALL GOOd");
 	size_t read_size = size;
 	size_t readed_size = 0;
 	size_t len = n->size;
 	if (offset < len) {
 		do {
-			// TRACE("GOOD OFFSET");
+			TRACE("GOOD OFFSET");
 			if (offset + size > len)
 				read_size = len - offset;
-			// printf("REAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD SIIIIIIIIIIIIIIIIIIIIZEEEEEEEEE %d\n", read_size);
+			printf("REAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD SIIIIIIIIIIIIIIIIIIIIZEEEEEEEEE %d\n", read_size);
 			memcpy(buf + readed_size, n->data + offset, read_size);
 			size -= read_size;
 			readed_size += read_size;
@@ -146,7 +163,7 @@ static int myfs_read(const char *path, char *buf, size_t size, off_t offset, str
 					file = file->next;
 					block_num = 0;
 					if (file == NULL)
-						return 0;
+						return readed_size;
 				}
 				offset = 0;
 				if (file->inode->is_file.data[block_num] == NULL) {
@@ -199,16 +216,45 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 	while (nind > 0) {
 		TRACE("TO NEXT NODE")
 		if (file->next == NULL) {
-			TRACE("ERROR (next == NULL)");
-			return 0;	
+			// TRACE("ERROR (next == NULL)");
+			// return 0;	
+			TRACE("+++++++++++++GO TO NEXT INODE!!!!!!!!!!");
+			inode in = make_empty_inode(2);
+			TRACE("");
+			unsigned long pos = find_free_inode();
+			TRACE("");
+			node new_node = make_node_from_empty_inode(in, pos);
+			printf("type %d\n", new_node->inode->type);
+			TRACE("");
+			file->next = new_node;
+			TRACE("");
+			printf("type %d\n", file->next->inode->type);
+			file->inode->next = pos;
+			TRACE("");
+			save_node(new_node);
+			TRACE("");
+			save_node(file);
+			TRACE("");
+			// file = new_node;
+			TRACE("");
+			// file = file->next;
+			block_num = 0;
+			TRACE("");
 		} 
 		file = file->next;
+		TRACE("")
+		printf("type %d\n", file->inode->type);
+		printf("nind %d\n", nind);
 		nind--;
+		printf("nind %d\n", nind);
 	}
+	TRACE("");
+
 	if (file->inode->type != 2) {
 		TRACE("NOT A FILE");
 		return -ENOENT;
 	}
+	TRACE("");
 	file_node n;
 	if (file->inode->is_file.data[block_num] == NULL) {
 		TRACE("NEW FILE");
@@ -220,18 +266,20 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 		TRACE("");
 		printf("+++++++++index %d \n", file->inode->is_file.data[block_num]);
 		TRACE("SPACE FINDED");
-	}
-	else {
+	} else {
 		TRACE("LOAD NODE");
 		n = load_data_node(file->inode->is_file.data[block_num]);
 	}
+	TRACE("");
 	if (n == NULL) {
 		TRACE("ERROR LOAD");
 		return 0;
 	}
+	TRACE("");
 	size_t write_size = size;
 	size_t writted_size = 0;
 	size_t len = n->size;
+	TRACE("");
 	if (offset <= len) {
 		do {
 			TRACE("+++++++++++++++++++++++++++++++++++++WRITE ITERATION++++++++++++++++++")
@@ -241,7 +289,7 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 			if (size > DATASIZE)
 				write_size = DATASIZE - offset;
 			printf("offcet %d, size %d, datasize %d, writte size %d, writted size %d\n", offset, size, DATASIZE, write_size, writted_size);
-			// printf("REAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD SIIIIIIIIIIIIIIIIIIIIZEEEEEEEEE %d\n", read_size);
+			TRACE("+++++++++++++++++++++++++++++++++++++WRITE DATAAAAAAAAAAAAA++++++++++++++++++")
 			memcpy(n->data + offset, buf + writted_size, write_size);
 			size -= write_size;
 			writted_size += write_size;
@@ -267,14 +315,22 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 					inode in = make_empty_inode(2);
 					TRACE("");
 					unsigned long pos = find_free_inode();
+					TRACE("");
 					node new_node = make_node_from_empty_inode(in, pos);
+					TRACE("");
 					file->next = new_node;
+					TRACE("");
 					file->inode->next = pos;
+					TRACE("");
 					save_node(new_node);
+					TRACE("");
 					save_node(file);
+					TRACE("");
 					file = new_node;
+					TRACE("");
 					// file = file->next;
 					block_num = 0;
+					TRACE("");
 					// if (file == NULL)
 					// 	return 0;
 				}
