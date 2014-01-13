@@ -185,6 +185,15 @@ file_node load_data_node(unsigned long index) {
 	return n;
 }
 
+void delete_data_node(unsigned long index) {
+	FILE * fs = open_fs();
+	fseek(fs, index, SEEK_SET);
+	int stat = NULL;
+	fwrite(&stat, 4, 1, fs);
+	fclose(fs);
+}
+
+
 void format() {
 	FILE * fs = open_fs();
 	TRACE("");
@@ -289,38 +298,16 @@ void add_child(node parent, node child) {
 		cp_name(parent->inode->is_folder.names[i], child->name);
 		save_node(child);
 		save_node(parent);
+	} else {
+		if (parent->next == NULL) {
+			inode in = make_empty_inode(1);
+			node n = make_new_node_from_empty_inode(in);
+			parent->next = n;
+			save_node(parent);
+		}
+		add_child(parent->next, child);
 	}
 }
-
-// file_node read_file_node(unsigned long index) {
-
-// }
-
-// void save_file_node(file_node n) {
-
-// }
-
-int write_data(node n, char *buf, size_t size, off_t offset) {
-	// int bl = (int)(offset / 128);
-	// printf("++++++++++++++++++++++++++++++blocks offset %d\n", bl);
-	// if (bl >= 50) return 0;
-	// offset = offset - bl * 128;
-	// int fsize = 128 - offset;
-	// if (fsize < size) {
-	// 	file_node fn = read_file_node(n->inode->is_file.data[bl]);
-	// 	memcpy(buf, fn->data + offset, fsize);
-	// 	save_node(fn);
-	// 	return size;
-	// } else {
-	// 	;
-	// }
-
-}
-
-int read_data(node n, char *buf, size_t size, off_t offset) {
-
-}
-
 
 
 void forget_child(node parent, node child) {
@@ -338,10 +325,6 @@ void forget_child(node parent, node child) {
 		}
 		n = n->next;
 	} while(n != NULL);
-}
-
-node read_node(unsigned long index) {
-	
 }
 
 void print_node(node n) {
@@ -398,9 +381,16 @@ void delete_node(node n) {
 void free_node(node n) {
 	do {
 		if (n->inode->type == 1) {
-			for (int i = 0; i < 0; i++) {
+			for (int i = 0; i < 10; i++) {
 				if (n->childs[i] != NULL) {
 					free_node(n->childs[i]);
+				}
+			}
+		} else if (n->inode->type == 2) {
+			for (int i = 0; i < 49; i++) {
+				if (n->inode->is_file.data[i] != NULL) {
+					delete_data_node(n->inode->is_file.data[i]);
+					n->inode->is_file.data[i] = NULL;
 				}
 			}
 		}

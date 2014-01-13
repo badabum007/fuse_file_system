@@ -464,6 +464,70 @@ int myfs_chmod(const char * path, mode_t mode) {
 }
 
 int myfs_truncate(const char * path, off_t offset) {
+	TRACE("READ START++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+	node file = find_node_by_name(path);
+	node root = file;
+	if (file->inode->type != 2) {
+		TRACE("NOT IS FILE");
+		return -ENOENT;
+	}
+	TRACE("")
+	printf("-------------------------------------------------------base offset %d\n", offset);
+
+	int base_offset = offset;
+	int block_num, node_num;
+	int node_capacity = DATASIZE * 49;
+	printf("-------------------------------------------------------node capacity %d\n", node_capacity);
+	node_num = offset / node_capacity;
+	offset -= node_num * node_capacity;
+
+	printf("-------------------------------------------------------node_num %d\n", node_num);
+	printf("-------------------------------------------------------new offset %d\n", offset);
+
+	TRACE("")
+	block_num = offset / DATASIZE;
+	offset -= block_num * DATASIZE;
+	TRACE("")
+	printf("-------------------------------------------------------block_num %d\n", block_num);
+	printf("-------------------------------------------------------new offset %d\n", offset);
+	int nind = node_num;
+	TRACE("")
+	while (nind > 0) {
+		if (file->next == NULL) {
+			TRACE("next null")
+			return 0;
+		}
+		TRACE("")
+		file = file->next;
+		nind--;
+	}
+	TRACE("")
+	if (file->inode->is_file.data[block_num] == NULL) {
+		TRACE("MAIN IS NOT EXISTS");
+		return 0;
+	}
+	TRACE("")
+	file_node n = load_data_node(file->inode->is_file.data[block_num]);
+	if (n == NULL) {
+		TRACE("READ ERROR");
+		return 0;
+	}
+	TRACE("")
+	if (n->size == 0) {
+		TRACE("EMPTY DATA");
+		return 0;
+	}
+	root->inode->is_file.total_size = base_offset;
+	save_node(root);
+	block_num++;
+	do {
+		for (int i = block_num; i < 49; i++) {
+			if (file->inode->is_file.data[i] != NULL)
+				delete_data_node(file->inode->is_file.data[i]);
+		}
+		file = file->next;
+		block_num = 0;
+	} while (file != NULL);
 	return 0;
 }
 

@@ -81,6 +81,7 @@ node make_node_from_empty_inode(inode in, unsigned long index);
 file_node make_empty_data_node();
 void save_data_node(file_node n, unsigned long index);
 file_node load_data_node(unsigned long index);
+void delete_data_node(unsigned long index);
 
 
 
