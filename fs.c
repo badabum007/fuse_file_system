@@ -119,6 +119,7 @@ inode make_empty_inode(int type) {
 	inode in = malloc(sizeof(struct inode_s));
 	in->type = type;
 	in->next = NULL;
+	in->mode = 0666;
 	if (type == 1) {
 		for (int i = 0; i < 10; i++) {
 			in->is_folder.nodes[i] = NULL;

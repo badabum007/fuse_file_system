@@ -2,6 +2,7 @@
 #define FS
 	
 #include <stdio.h>
+#include <fuse.h>
 
 // #define DEBUG
 
@@ -27,6 +28,7 @@ typedef struct ifile_s {
 typedef struct inode_s * inode;
 struct inode_s {
 	int type;
+	mode_t mode;
 	unsigned long next;
 	union {
 		ifolder is_folder;

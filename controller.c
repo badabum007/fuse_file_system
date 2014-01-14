@@ -29,12 +29,12 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 		printf("-----is null inode %d\n", n->inode == NULL);
 		if (n->inode->type == 1) {
 			TRACE("it is dir");
-			stbuf->st_mode = S_IFDIR | 0777;
+			stbuf->st_mode = n->inode->mode | S_IFDIR /*| 0777*/;
 			stbuf->st_nlink = 3;
 			return 0;
 		} else {
 			printf("-----it is file\n");
-			stbuf->st_mode = S_IFREG | 0666;
+			stbuf->st_mode = n->inode->mode | S_IFREG/* | 0666*/;
 			stbuf->st_nlink = 1;
 			stbuf->st_size = n->inode->is_file.total_size;
 			return 0;
@@ -59,6 +59,7 @@ static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 
 	node parent = find_node_parent(path);
 	inode in = make_empty_inode(2);
+	in->mode = mode;
 	TRACE("");
 	node n = make_node_from_empty_inode(in, pos);
 	TRACE("");
@@ -66,10 +67,6 @@ static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	TRACE("");
 	add_child(parent, n);
 	TRACE("");
-	return 0;
-}
-
-int myfs_setxattr(const char * a, const char * b, const char * c, size_t s, int xz) {
 	return 0;
 }
 
@@ -81,8 +78,6 @@ static int myfs_open(const char *path, struct fuse_file_info *fi) {
 		return -ENOENT;
 	return 0;
 }
-
-
 
 static int myfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 	TRACE("READ START++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -408,6 +403,7 @@ static int myfs_mkdir(const char* path, mode_t mode) {
 
 	node parent = find_node_parent(path);
 	inode in = make_empty_inode(1);
+	in->mode = mode;
 
 	TRACE("");
 
@@ -465,6 +461,14 @@ static int myfs_rmdir(const char *path) {
 }
 
 int myfs_chmod(const char * path, mode_t mode) {
+	node n = find_node_by_name(path);
+	if (n == NULL) {
+		TRACE("file not found");
+		return -ENOENT;
+	} else {
+		n->inode->mode = mode;
+		save_node(n);
+	}
 	return 0;
 }
 
@@ -544,45 +548,14 @@ static struct fuse_operations operations = {
 	.opendir 	= myfs_opendir,
 	.mkdir 		= myfs_mkdir,
 	.rmdir      = myfs_rmdir,
-	// .releasedir = myfs_releasedir
 	.open       = myfs_open,
 	.create     = myfs_create,
 	.read 		= myfs_read,
 	.write 		= myfs_write,
 	.unlink 	= myfs_unlink, 
-	// .setxattr 	= myfs_setxattr, 
-	// .chmod		= myfs_chmod, 
+	.chmod		= myfs_chmod, 
 	.truncate 	= myfs_truncate
-	// .mknod = myfs_mknod,
 };
-
-void test_mkdir() {
-	inode in = malloc(sizeof(struct inode_s));
-	in->type = 1;
-	for (int i = 0; i < 0; i++) {
-		in->is_folder.nodes[i] = NULL;
-		// in->is_folder.names[i] = NULL;
-	}
-	in->next = NULL;
-
-	node n = malloc(sizeof(struct node_s));
-	n->index = find_free_inode();
-	n->inode = in;
-	n->parent = fs_cash;
-	n->next = NULL;
-	for (int i = 0; i < 10; i++) {
-		n->childs[i] = NULL;
-	}
-	cp_name(n->name, "testdir");
-
-	save_node(n);
-	add_child(fs_cash, n);
-
-	printf("added to parent\n");
-	print_node(fs_cash);
-
-	save_node(fs_cash);
-}
 
 int main(int argc, char *argv[]) {
 
