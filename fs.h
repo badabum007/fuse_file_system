@@ -3,7 +3,7 @@
 	
 #include <stdio.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 	#define TRACE(a) printf(">>DEBUG>>line: %d, mess: %s\n", __LINE__, a);

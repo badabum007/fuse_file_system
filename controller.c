@@ -44,6 +44,7 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 
 static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
 	int pos = find_free_inode();
+	if (pos < 0) return -ENOENT;
 	TRACE(path);
 	char** names = split(path);
 	TRACE(path);
@@ -222,6 +223,7 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 			inode in = make_empty_inode(2);
 			TRACE("");
 			unsigned long pos = find_free_inode();
+			if (pos < 0) return 0;
 			TRACE("");
 			node new_node = make_node_from_empty_inode(in, pos);
 			printf("type %d\n", new_node->inode->type);
@@ -261,6 +263,7 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 		n = make_empty_data_node();
 		TRACE("");
 		file->inode->is_file.data[block_num] = find_free_data_node();
+		if (file->inode->is_file.data[block_num] < 0) return 0;
 		TRACE("");
 		file->inode->is_file.used_count++;
 		TRACE("");
@@ -315,6 +318,7 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 					inode in = make_empty_inode(2);
 					TRACE("");
 					unsigned long pos = find_free_inode();
+					if (pos < 0) return writted_size;
 					TRACE("");
 					node new_node = make_node_from_empty_inode(in, pos);
 					TRACE("");
@@ -337,6 +341,7 @@ static int myfs_write(const char *path, const char *buf, size_t size, off_t offs
 				offset = 0;
 				n = make_empty_data_node();
 				file->inode->is_file.data[block_num] = find_free_data_node();
+				if (file->inode->is_file.data[block_num] < 0) return writted_size;
 				file->inode->is_file.used_count++;
 				
 			}
@@ -388,7 +393,7 @@ static int myfs_unlink(const char *path) {
 
 static int myfs_mkdir(const char* path, mode_t mode) {
 	int pos = find_free_inode();
-
+	if (pos < 0) return -ENOENT;
 	TRACE(path);
 	char** names = split(path);
 	TRACE(path);

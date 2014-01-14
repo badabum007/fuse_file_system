@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-char* filesys = "./device";
+char* filesys = "/home/medvedmike/Dropbox/VSU/operating_systems/fs/bin/device";
 // char* filesys = "/dev/sdc4";
 
 char** split(char* path) {
@@ -136,6 +136,7 @@ inode make_empty_inode(int type) {
 }
 
 node make_node_from_empty_inode(inode in, unsigned long index) {
+	if (index < 0) return NULL;
 	TRACE("")
 	node head = malloc(sizeof(struct node_s));
 	TRACE("")
@@ -166,10 +167,12 @@ file_node make_empty_data_node() {
 }
 
 void save_data_node(file_node n, unsigned long index) {
-	FILE * fs = open_fs();
-	fseek(fs, index, SEEK_SET);
-	fwrite(n, sizeof(struct file_node_s), 1, fs);
-	fclose(fs);
+	if (index > 0) {
+		FILE * fs = open_fs();
+		fseek(fs, index, SEEK_SET);
+		fwrite(n, sizeof(struct file_node_s), 1, fs);
+		fclose(fs);
+	}
 }
 
 file_node load_data_node(unsigned long index) {
@@ -216,7 +219,7 @@ void format() {
 	TRACE("fs info written");
 
 	float last = 0, old = 0;
-	for (unsigned long i = fs_info.inode_start; i < fs_info.data_start; i+=fs_info.inode_size) {
+	for (unsigned long i = fs_info.inode_start; i <= fs_info.data_start - fs_info.inode_size; i+=fs_info.inode_size) {
 		fseek(fs,i,SEEK_SET);  
 		fwrite(&zero, 4, 1, fs);
 		float cur = ((float)i / fs_info.data_start) * 100;
@@ -228,7 +231,7 @@ void format() {
 		// old = cur;
 	}
 	last = 0;
-	for (unsigned long i = fs_info.data_start; i < fs_info.dev_size; i+=fs_info.data_node_size) {
+	for (unsigned long i = fs_info.data_start; i <= fs_info.dev_size - fs_info.data_node_size; i+=fs_info.data_node_size) {
 		fseek(fs,i,SEEK_SET);
 		fwrite(&zero, 4, 1, fs);
 		float cur = ((float)i / fs_info.dev_size) * 100;
@@ -302,6 +305,7 @@ void add_child(node parent, node child) {
 		if (parent->next == NULL) {
 			inode in = make_empty_inode(1);
 			node n = make_new_node_from_empty_inode(in);
+			if (n == NULL) return;
 			parent->next = n;
 			save_node(parent);
 		}
@@ -351,6 +355,8 @@ unsigned long find_free_inode() {
 		printf("try %d \n", pos);
 		fread(&stat, 4, 1, fs);
 		pos += fs_info.inode_size;
+		if (pos + fs_info.inode_size >= fs_info.data_start)
+			return -1;
 		fseek(fs, pos, SEEK_SET);
 	} while (stat != NULL);
 	fclose(fs);
@@ -366,6 +372,8 @@ unsigned long find_free_data_node() {
 		printf("try %d \n", pos);
 		fread(&stat, 4, 1, fs);
 		pos += fs_info.data_node_size;
+		if (pos + fs_info.data_node_size >= fs_info.dev_size)
+			return -1;
 		fseek(fs, pos, SEEK_SET);
 	} while (stat != NULL);
 	fclose(fs);
