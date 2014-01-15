@@ -42,6 +42,35 @@ static int myfs_getattr(const char *path, struct stat *stbuf) {
 	}
 }
 
+int myfs_rename(const char * old, const char * new) {
+	node tmp = find_node_by_name(new);
+	if (tmp != NULL)
+		delete_node(tmp);
+	node nod = find_node_by_name(old);
+	node parent = find_node_parent(old);
+	if (parent->inode->type != 1)
+		return -ENOENT;
+	if (nod == NULL || parent == NULL)
+		return -ENOENT;
+	cp_name(nod->name, new+1);
+	node n = parent;
+	int index = -1;
+	do {
+		for (int i = 0; i < 10 && index < 0; i++) {
+			if (n->inode->is_folder.nodes[i] == nod->index) {
+				index = i;
+			}
+		}
+		if (index < 0)
+			n = n->next;
+	} while (n != NULL && index < 0);
+	cp_name(n->inode->is_folder.names[index], new+1);
+	save_node(n);
+	save_node(nod);
+	return 0;
+}
+
+
 static int myfs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
 	int pos = find_free_inode();
 	if (pos < 0) return -ENOENT;
@@ -76,6 +105,8 @@ static int myfs_open(const char *path, struct fuse_file_info *fi) {
 		return -ENOENT;
 	if (n->inode->type != 2)
 		return -ENOENT;
+	// if ((fi->flags & n->inode->mode) == O_RDONLY)
+	// 	return -EACCES;
 	return 0;
 }
 
@@ -554,7 +585,8 @@ static struct fuse_operations operations = {
 	.write 		= myfs_write,
 	.unlink 	= myfs_unlink, 
 	.chmod		= myfs_chmod, 
-	.truncate 	= myfs_truncate
+	.truncate 	= myfs_truncate,
+	.rename 	= myfs_rename
 };
 
 int main(int argc, char *argv[]) {

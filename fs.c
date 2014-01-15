@@ -37,7 +37,7 @@ char** split(char* path) {
 }
 
 void cp(char* dest, char* source) {
-	printf("copy name\n");
+	printf("copy string\n");
 	int len = strlen(source);
 	printf("source %s\n", source);
 	int i = 0;
