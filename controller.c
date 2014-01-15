@@ -105,8 +105,8 @@ static int myfs_open(const char *path, struct fuse_file_info *fi) {
 		return -ENOENT;
 	if (n->inode->type != 2)
 		return -ENOENT;
-	// if ((fi->flags & n->inode->mode) == O_RDONLY)
-	// 	return -EACCES;
+	if ((fi->flags & 3) != O_RDONLY)
+		return -EACCES;
 	return 0;
 }
 
@@ -504,7 +504,6 @@ int myfs_chmod(const char * path, mode_t mode) {
 }
 
 int myfs_truncate(const char * path, off_t offset) {
-	TRACE("READ START++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 	node file = find_node_by_name(path);
 	node root = file;
 	if (file->inode->type != 2) {
